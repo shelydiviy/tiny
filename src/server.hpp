@@ -6,7 +6,7 @@
 #endif
 
 #include "asio.hpp"
-#include "Steam3Server.h"
+//#include "Steam3Server.h"
 #include "GCClient.h"
 #include <iostream>
 #include <vector>
