@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <chrono>
 #include <thread>
+#include <string>
 
 // Регистрация на всех мастер-серверах
 void GoldSourceServer::register_with_masters() {
