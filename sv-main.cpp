@@ -1,4 +1,5 @@
-#include "server.hpp"
+
+#include "src/server.hpp"
 #include <iostream>
 #include <cstdlib>
 
