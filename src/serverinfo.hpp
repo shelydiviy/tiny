@@ -1,76 +1,47 @@
-#ifndef __TINY_CSGO_SERVER_SERVERINFO_HPP__
-#define __TINY_CSGO_SERVER_SERVERINFO_HPP__
+#include "serverinfo.hpp"
+#include <iostream>
+#include <cstring>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
 
-#include <string>
-#include "common/info_const.hpp"
+// Отправка данных на конкретный мастер-сервер
+void ServerInfo::SendServerInfoToMaster(const std::string &masterAddress) {
+    char infoString[512];
+    snprintf(infoString, sizeof(infoString),
+             "\\infoRequest\\port\\%d\\gamedir\\%s\\map\\%s\\maxplayers\\%d\\players\\%d\\protocol\\%d\\",
+             port, gameDir.c_str(), currentMap.c_str(), maxPlayers, numPlayers, PROTOCOL_VERSION);
 
-class ServerInfoHolder
-{
-public:
-	std::string& ServerName() { return m_ServerName; }
-	std::string& ServerMap() { return m_ServerMap; }
-	std::string& ServerGameFolder() { return m_ServerGameFolder; }
-	std::string& ServerDescription() { return m_ServerDescription; }
-	constexpr uint16_t ServerAppID() { return SERVER_APPID; }
-	const uint8_t ServerNumClients() { return m_ServerMaxClients - 1; }
-	uint8_t& ServerMaxClients() { return m_ServerMaxClients; }
-	uint8_t& ServerNumFakeClient() { return m_ServerNumFakeClients; }
-	uint8_t& ServerType() { return m_ServerType; }
-	uint8_t& ServerOS() { return m_ServerOS; }
-	uint8_t& ServerProtocol() { return m_ServerProtocol; }
-	bool& ServerPasswordNeeded() { return m_ServerPasswdNeeded; }
-	bool& ServerVacStatus() { return m_ServerVacStatus; }
-	bool& ServerIsOfficial() { return m_ServerIsOfficial; }
-	std::string& ServerTag() { return m_ServerTag; }
+    int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sockfd < 0) {
+        std::cerr << "Failed to create socket" << std::endl;
+        return;
+    }
 
-	void SaveA2sPlayerResponse(const char* pData, size_t length)
-	{
-		if (length > sizeof(m_A2sPlayerResponse))
-		{
-			printf("The size of the A2S_PLAYER response %d is too large\n", length);
-			return;
-		}
+    struct sockaddr_in masterAddr;
+    memset(&masterAddr, 0, sizeof(masterAddr));
+    masterAddr.sin_family = AF_INET;
+    masterAddr.sin_port = htons(27010); // Порт мастер-сервера Steam
+    inet_pton(AF_INET, masterAddress.c_str(), &masterAddr.sin_addr);
 
-		memcpy(m_A2sPlayerResponse, pData, length);
-		m_A2sPlayerResponseLength = length;
-	}
-
-	char* GetA2sPlayerResponse()
-	{
-		return m_A2sPlayerResponse;
-	}
-
-	size_t GetA2sPlayerResponseLength()
-	{
-		return m_A2sPlayerResponseLength;
-	}
-
-private:
-	std::string		m_ServerName			= SERVER_NAME;
-	std::string		m_ServerMap				= SERVER_MAP;
-	std::string		m_ServerGameFolder		= SERVER_GAME_FOLDER;
-	std::string		m_ServerDescription		= SERVER_DESCRIPTION;
-	uint8_t			m_ServerNumClients		= SERVER_NUM_CLIENTS;
-	uint8_t			m_ServerMaxClients		= SERVER_MAX_CLIENTS;
-	uint8_t			m_ServerNumFakeClients	= SERVER_NUM_FAKE_CLIENTS;
-	uint8_t			m_ServerType			= SERVER_TYPE;
-	uint8_t			m_ServerOS				= SERVER_OS;
-	uint8_t			m_ServerProtocol		= SERVER_PROTOCOL;
-	bool			m_ServerPasswdNeeded	= SERVER_PASSWD_NEEDED;
-	bool			m_ServerVacStatus		= SERVER_VAC_STATES;
-	bool			m_ServerIsOfficial		= SERVER_VALVE_OFFICIAL;
-	std::string		m_ServerTag				= SERVER_TAG;
-
-	char	m_A2sPlayerResponse[20480];
-	size_t	m_A2sPlayerResponseLength = 0;
-};
-
-static inline ServerInfoHolder s_ServerInfoHolder;
-
-inline ServerInfoHolder& GetServerInfoHolder()
-{
-	return s_ServerInfoHolder;
+    sendto(sockfd, infoString, strlen(infoString), 0, (struct sockaddr *)&masterAddr, sizeof(masterAddr));
+    close(sockfd);
 }
 
-#endif // !__TINY_CSGO_SERVER_SERVERINFO_HPP__
+// Регистрация на всех мастер-серверах
+void ServerInfo::RegisterWithMasters() {
+    const std::string masterServers[] = {
+        "hl1master.steampowered.com",
+        "127.0.0.1" // Локальный мастер-сервер (для тестирования)
+    };
 
+    for (const auto &master : masterServers) {
+        SendServerInfoToMaster(master);
+    }
+}
+
+// Обновление информации о сервере
+void ServerInfo::UpdateServerInfo(const std::string &newMap, int newNumPlayers) {
+    currentMap = newMap;
+    numPlayers = newNumPlayers;
+}
