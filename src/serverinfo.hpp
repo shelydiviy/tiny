@@ -1,46 +1,33 @@
-#include <iostream>
-#include <cstring>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <unistd.h>
+#ifndef SERVERINFO_HPP
+#define SERVERINFO_HPP
 
-// Отправка данных на конкретный мастер-сервер
-void ServerInfo::SendServerInfoToMaster(const std::string &masterAddress) {
-    char infoString[512];
-    snprintf(infoString, sizeof(infoString),
-             "\\infoRequest\\port\\%d\\gamedir\\%s\\map\\%s\\maxplayers\\%d\\players\\%d\\protocol\\%d\\",
-             port, gameDir.c_str(), currentMap.c_str(), maxPlayers, numPlayers, PROTOCOL_VERSION);
+#include <string>
 
-    int sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (sockfd < 0) {
-        std::cerr << "Failed to create socket" << std::endl;
-        return;
+class ServerInfo {
+public:
+    // Конструктор
+    ServerInfo(int port, const std::string& gameDir, const std::string& currentMap, int maxPlayers)
+        : port(port), gameDir(gameDir), currentMap(currentMap), maxPlayers(maxPlayers), numPlayers(0) {}
+
+    // Геттеры для получения информации о сервере
+    int GetPort() const { return port; }
+    const std::string& GetGameDir() const { return gameDir; }
+    const std::string& GetCurrentMap() const { return currentMap; }
+    int GetMaxPlayers() const { return maxPlayers; }
+    int GetNumPlayers() const { return numPlayers; }
+
+    // Обновление информации о сервере
+    void UpdateServerInfo(const std::string& newMap, int newNumPlayers) {
+        currentMap = newMap;
+        numPlayers = newNumPlayers;
     }
 
-    struct sockaddr_in masterAddr;
-    memset(&masterAddr, 0, sizeof(masterAddr));
-    masterAddr.sin_family = AF_INET;
-    masterAddr.sin_port = htons(27010); // Порт мастер-сервера Steam
-    inet_pton(AF_INET, masterAddress.c_str(), &masterAddr.sin_addr);
+private:
+    int port;
+    std::string gameDir;
+    std::string currentMap;
+    int maxPlayers;
+    int numPlayers;
+};
 
-    sendto(sockfd, infoString, strlen(infoString), 0, (struct sockaddr *)&masterAddr, sizeof(masterAddr));
-    close(sockfd);
-}
-
-// Регистрация на всех мастер-серверах
-void ServerInfo::RegisterWithMasters() {
-    const std::string masterServers[] = {
-        "hl1master.steampowered.com",
-        "127.0.0.1" // Локальный мастер-сервер (для тестирования)
-    };
-
-    for (const auto &master : masterServers) {
-        SendServerInfoToMaster(master);
-    }
-}
-
-// Обновление информации о сервере
-void ServerInfo::UpdateServerInfo(const std::string &newMap, int newNumPlayers) {
-    currentMap = newMap;
-    numPlayers = newNumPlayers;
-}
+#endif // SERVERINFO_HPP
