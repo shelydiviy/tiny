@@ -5,6 +5,7 @@
 #include <chrono>
 #include <thread>
 #include <string>
+#include <boost/asio.hpp>
 
 // Регистрация на всех мастер-серверах
 void GoldSourceServer::register_with_masters() {
