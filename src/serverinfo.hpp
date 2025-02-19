@@ -1,4 +1,3 @@
-#include "serverinfo.hpp"
 #include <iostream>
 #include <cstring>
 #include <sys/socket.h>
